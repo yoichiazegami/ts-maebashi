@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M+ Stroke</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+</head>
+<body>
+    <div id="app-wrapper">
+        <div id="main-content">
+            <div id="canvas-container"></div>
+
+            <div id="impression-overlay"></div>
+
+            <div id="rules-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>蒸留ルール</h3>
+                        <button onclick="document.getElementById('rules-modal').style.display='none'">&times;</button>
+                    </div>
+                    <pre id="rules-text"></pre>
+                </div>
+            </div>
+
+            <div id="input-area">
+                <div id="input-row">
+                    <textarea id="text-input" placeholder="ここにテキストを入力…" rows="1"></textarea>
+                    <div id="input-buttons">
+                        <button id="next-text-btn" onclick="nextText()">新しいサンプルテキストを生成</button>
+                        <span class="input-divider"></span>
+                        <span id="predict-label">方式：</span>
+                        <select id="predict-mode" title="推論モード">
+                            <option value="hybrid" selected>ハイブリッド</option>
+                            <option value="llm">LLM</option>
+                            <option value="knn">k-NN</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /main-content -->
+
+        <button id="settings-btn" onclick="document.getElementById('app-wrapper').classList.toggle('panel-open')" title="設定パネル">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="4" x2="15" y2="4"/><line x1="3" y1="9" x2="15" y2="9"/><line x1="3" y1="14" x2="15" y2="14"/>
+            </svg>
+        </button>
+
+        <aside id="settings-panel">
+            <input type="hidden" id="p-scaleX" value="100">
+            <input type="hidden" id="p-scaleY" value="100">
+
+            <section>
+                <h4>組版</h4>
+                <input type="hidden" id="p-fontSize" value="50">
+                <div class="param">
+                    <label>組方向</label>
+                    <select id="p-direction">
+                        <option value="h" selected>横組</option>
+                        <option value="v">縦組</option>
+                    </select>
+                </div>
+                <div class="param">
+                    <label>行間 <span id="v-lineHeight">1.30</span></label>
+                    <input type="range" id="p-lineHeight" min="1.00" max="1.70" value="1.30" step="0.05">
+                </div>
+                <div class="param">
+                    <label>字間 <span id="v-letterSpacing">1.05</span></label>
+                    <input type="range" id="p-letterSpacing" min="0.90" max="1.35" value="1.05" step="0.05">
+                </div>
+            </section>
+
+            <section>
+                <h4>ブラシ形状</h4>
+                <div class="param">
+                    <label>太さ <span id="v-strokeW">2.0</span></label>
+                    <input type="range" id="p-strokeW" min="0.1" max="10" value="2" step="0.1">
+                </div>
+                <div class="param">
+                    <label>端の形状</label>
+                    <select id="p-lineCap">
+                        <option value="round" selected>丸 (round)</option>
+                        <option value="butt">平 (butt)</option>
+                        <option value="square">角 (square)</option>
+                    </select>
+                </div>
+                <div class="param">
+                    <label>縦横コントラスト <span id="v-contrast">0</span></label>
+                    <input type="range" id="p-contrast" min="-500" max="500" value="0">
+                </div>
+            </section>
+
+            <section>
+                <h4>アンカーポイント</h4>
+                <div class="param">
+                    <label>増減 <span id="v-anchorPoints">0</span></label>
+                    <input type="range" id="p-anchorPoints" min="-30" max="6" value="0" step="0.5">
+                </div>
+            </section>
+
+            <section>
+                <h4>パス変形</h4>
+                <div class="param">
+                    <label>直線化</label>
+                    <select id="p-linearize">
+                        <option value="0" selected>オフ</option>
+                        <option value="1">オン</option>
+                    </select>
+                </div>
+                <div class="param">
+                    <label>角を丸める <span id="v-cornerRadius">0</span></label>
+                    <input type="range" id="p-cornerRadius" min="0" max="40" value="0">
+                </div>
+                <div class="param param-toggle">
+                    <label><input type="checkbox" id="p-twist-on"> ランダム・ひねり <span id="v-twist">0</span></label>
+                    <input type="range" id="p-twist" min="0" max="80" value="0">
+                </div>
+                <div class="param param-toggle">
+                    <label><input type="checkbox" id="p-roughen-on"> ラフ <span id="v-roughen">0</span></label>
+                    <input type="range" id="p-roughen" min="0" max="50" value="0">
+                </div>
+            </section>
+            <section class="actions">
+                <button id="randomize-btn" onclick="randomizeParams()">🎲 ランダム</button>
+                <button id="reset-btn" onclick="resetParams()">↩ リセット</button>
+            </section>
+
+            <section id="impression-section">
+                <h4>印象学習</h4>
+                <div class="impression-actions">
+                    <button id="save-sample-btn" onclick="saveSample()">保存</button>
+                    <button onclick="nextText()">スキップ</button>
+                </div>
+                <div class="impression-info">
+                    <span id="sample-count">0</span> 件のデータ
+                    <span id="model-status"></span>
+                </div>
+                <div class="impression-actions">
+                    <button onclick="exportImpressionData()">書出</button>
+                    <button onclick="document.getElementById('import-file').click()">読込</button>
+                    <button onclick="if(confirm('全データを削除しますか？')){ImpressionModel.clearSamples();updateSampleCount();}">消去</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display:none"
+                       onchange="importImpressionData(this)">
+                <div class="param" style="margin-top:12px">
+                    <label>OpenAI API Key</label>
+                    <input type="password" id="api-key-input" placeholder="sk-..." class="api-key-field">
+                </div>
+                <div class="impression-actions" style="margin-top:6px">
+                    <button onclick="rebuildEmbeddings()">既存データにembed付与</button>
+                </div>
+                <div class="impression-actions" style="margin-top:6px">
+                    <button onclick="runDistill()">蒸留（ルール抽出）</button>
+                    <button onclick="showDistilledRules()">ルール閲覧</button>
+                </div>
+                <div id="distill-status" class="impression-info" style="margin-top:4px; font-size:10px; color:#888;"></div>
+            </section>
+        </aside>
+    </div><!-- /app-wrapper -->
+
+    <script src="impression_model.js"></script>
+    <script>
+    // -------------------------------------------------------
+    //  テキストバンク（多様なジャンル・文体）
+    // -------------------------------------------------------
+    const TEXT_BANK = [
+        // ニュース見出し
+        "首相、緊急経済対策を発表",
+        "新型ロケット打ち上げ成功",
+        "株価、過去最高値を更新",
+        "大規模サイバー攻撃を検知",
+        "気候変動対策で国際合意",
+        "死刑執行、波紋広がる",
+        "暴動鎮圧に催涙弾を使用",
+        // ビジネス
+        "第三四半期の業績についてご報告申し上げます",
+        "本件につきまして、ご検討のほどよろしくお願いいたします",
+        "来期の事業計画策定にあたり",
+        // 詩的表現
+        "月の光が水面を渡る",
+        "風に揺れる一輪の花",
+        "遠い記憶のかけら",
+        "夜明け前の青い静寂",
+        "雨だれが窓を叩く午後",
+        "星屑を集めて夜空に還す",
+        "肌に残る指の温度",
+        "汗ばむ夜の吐息",
+        // 文学的
+        "それは、長い冬の終わりに訪れた",
+        "彼女は何も言わず、ただ微笑んだ",
+        "道は暗く、終わりが見えなかった",
+        "すべてが灰色に沈む街で",
+        "血の匂いが鉄のように喉を刺した",
+        "愛していると言えないまま、朝が来た",
+        // カジュアル
+        "まじでやばい！最高すぎる",
+        "今日めっちゃ楽しかった〜",
+        "これ美味しすぎて泣ける",
+        "ちょっと待ってwww",
+        "なにそれ超ウケるんだけど",
+        "おつかれ〜今日もがんばった",
+        "クソワロタ",
+        "は？意味わかんないんだけど",
+        // テクノロジー
+        "量子コンピューターが実用化へ",
+        "AIが創造性を獲得する日",
+        "メタバースが変える働き方",
+        "次世代半導体の開発競争",
+        "ブロックチェーンの新たな可能性",
+        // 古典・伝統
+        "花鳥風月",
+        "一期一会",
+        "侘び寂びの美学",
+        "月は東に日は西に",
+        "春はあけぼの",
+        "行く川の流れは絶えずして",
+        "色は匂へど散りぬるを",
+        // 力強い
+        "限界を超えろ",
+        "絶対に諦めない",
+        "鉄の意志で挑む",
+        "嵐を切り裂く覚悟",
+        "魂を燃やせ",
+        "革命の狼煙を上げよ",
+        "黙って従うな、叫べ",
+        // 柔らかい
+        "ふわふわのしあわせ",
+        "まるくてやさしい世界",
+        "やわらかな陽だまり",
+        "もこもこの雲に包まれて",
+        "そっと手を差し伸べる",
+        // 静謐
+        "沈黙が語りかける",
+        "凪の海を見つめて",
+        "時が止まったような部屋",
+        "静寂の中の息遣い",
+        "誰もいない図書館",
+        // 装飾的
+        "絢爛豪華な宮殿",
+        "華麗なる一族の物語",
+        "壮麗な大聖堂の天井画",
+        "極彩色の万華鏡",
+        // 簡素
+        "白い壁。木の椅子。",
+        "余白を愛する",
+        "引き算の美学",
+        "何もない、だから美しい",
+        // 広告コピー風
+        "あなたの毎日に、小さな革命を。",
+        "その一杯が、世界を変える。",
+        "未来は、もう始まっている。",
+        "すべての挑戦者に、光を。",
+        "ここから、新しい物語が始まる。",
+        // 多様な文体
+        "本日は晴天なり",
+        "吾輩は猫である",
+        "桜散る季節の移ろい",
+        "データが示す真実",
+        "暗号通貨の夜明け",
+        "手紙を書くということ",
+        "珈琲一杯の贅沢",
+        // 過激・暴力的
+        "殺してやる",
+        "血まみれの拳で立ち上がる",
+        "復讐の刃を研ぐ",
+        "この世の地獄を見た",
+        "戦場の叫び声が耳を離れない",
+        "死ね、と呟いた唇",
+        // 官能的・耽美
+        "絡み合う素肌の熱",
+        "唇が触れた瞬間、世界が溶けた",
+        "禁断の果実に手を伸ばす",
+        "蜜のように甘い痛み",
+        "背徳の香りに酔う夜",
+        "濡れた髪を掻き上げる指先",
+        "乱れた寝具の上の沈黙",
+        // ダーク・退廃
+        "腐敗した楽園へようこそ",
+        "狂気は静かに微笑む",
+        "毒を飲み干すような愛",
+        "地獄の底で神を嗤う",
+        "棺桶の中はとても静かだ",
+        "吐き気がするほど美しい",
+        // ホラー・怪奇
+        "振り向いたら、そこにいた",
+        "壁の中から爪で引っ掻く音",
+        "鏡に映るのは私ではなかった",
+        "首のない人形が笑っている",
+        "あの子はもう三年前に死んでいる",
+        // サブカルチャー・ニッチ
+        "推しが尊すぎて昇天",
+        "限界オタクの叫び",
+        "概念が具現化した存在",
+        "解釈違いで宇宙が割れる",
+        "界隈最大手の覇権コンテンツ",
+        "性癖に刺さりすぎて無理",
+        "ガチ恋勢の末路",
+        // 罵倒・毒舌
+        "黙れ、愚か者",
+        "その程度か、失望した",
+        "くだらない。実にくだらない",
+        "お前に人の心はあるのか",
+        "吐き気がする偽善者め",
+        // 宗教・呪術・神秘
+        "汝、罪を悔い改めよ",
+        "南無阿弥陀仏",
+        "呪いは解けない",
+        "神は沈黙している",
+        "祈りの言葉は闇に溶けた",
+        "魔術回路を起動する",
+        // 標識・注意書き
+        "この先通行止め",
+        "高圧電流注意　触れるな",
+        "立入禁止区域",
+        "毒物　取扱注意",
+        "非常口はこちら",
+        // 哲学的
+        "存在とは何か",
+        "我思う、ゆえに我あり",
+        "言葉にできないものを語る矛盾",
+        "無は存在するか",
+        "自由という名の牢獄",
+        // グロテスク・身体
+        "内臓が透けて見える光",
+        "皮膚の下で蠢くもの",
+        "骨が軋む音がする",
+        "眼球に映る最後の景色",
+        // ナンセンス・不条理
+        "火曜日の味がする",
+        "透明な叫び声を拾う",
+        "永遠は昨日終わった",
+        "三角形の感情",
+        "沈黙を音読する",
+    ];
+
+    function getRandomText() {
+        return TEXT_BANK[Math.floor(Math.random() * TEXT_BANK.length)];
+    }
+
+    // LLM生成テキストのバッファ
+    let _generatedTexts = [];
+    let _generating = false;
+
+    async function fillTextBuffer() {
+        if (_generating || !ImpressionModel.getApiKey()) return;
+        _generating = true;
+        const overlay = document.getElementById('impression-overlay');
+        overlay.textContent = '⏳ テキスト生成中…';
+        try {
+            const texts = await ImpressionModel.generateTexts(10);
+            if (texts && texts.length > 0) {
+                _generatedTexts = _generatedTexts.concat(texts);
+                overlay.textContent = '✓ ' + texts.length + '件のテキスト生成完了';
+            } else {
+                overlay.textContent = '';
+            }
+        } catch (e) {
+            console.warn('Text generation error:', e);
+        }
+        _generating = false;
+    }
+
+    function nextText() {
+        const textarea = document.getElementById('text-input');
+        if (_generatedTexts.length > 0) {
+            textarea.value = _generatedTexts.shift();
+            if (_generatedTexts.length < 3) fillTextBuffer();
+        } else {
+            textarea.value = getRandomText();
+            if (ImpressionModel.getApiKey()) fillTextBuffer();
+        }
+        textarea.dispatchEvent(new Event('input'));
+    }
+
+    // -------------------------------------------------------
+    //  パラメーター制御
+    // -------------------------------------------------------
+    function updateLabel(el) {
+        const id = el.id.replace('p-', 'v-');
+        const span = document.getElementById(id);
+        if (!span) return;
+        const v = el.value;
+        if (id.includes('scale')) span.textContent = v + '%';
+        else if (id.includes('contrast')) span.textContent = (v >= 0 ? '+' : '') + v;
+        else span.textContent = v;
+    }
+    document.querySelectorAll('#settings-panel input[type=range]').forEach(el => {
+        el.addEventListener('input', () => updateLabel(el));
+    });
+
+    document.querySelectorAll('.param-toggle input[type=checkbox]').forEach(cb => {
+        const param = cb.closest('.param-toggle');
+        const sync = () => param.classList.toggle('active', cb.checked);
+        cb.addEventListener('change', sync);
+        sync();
+    });
+
+    function randBetween(a, b) { return a + Math.random() * (b - a); }
+    function randInt(a, b) { return Math.round(randBetween(a, b)); }
+
+    function randomizeParams() {
+        const sets = {
+            'p-lineHeight':   () => (randBetween(1.0, 1.7)).toFixed(2),
+            'p-letterSpacing': () => (randBetween(0.9, 1.35)).toFixed(2),
+            'p-strokeW':      () => (randBetween(0.3, 10)).toFixed(1),
+            'p-contrast':     () => randInt(-300, 300),
+            'p-anchorPoints': () => (randBetween(-10, 4) * 2 | 0) / 2,
+            'p-cornerRadius': () => randInt(0, 40),
+        };
+        for (const [id, fn] of Object.entries(sets)) {
+            const el = document.getElementById(id);
+            if (el) { el.value = fn(); updateLabel(el); }
+        }
+        const caps = ['round', 'butt', 'square'];
+        document.getElementById('p-lineCap').value = caps[randInt(0, 2)];
+        document.getElementById('p-linearize').value = Math.random() < 0.25 ? '1' : '0';
+
+        const twistOn = Math.random() < 0.25;
+        document.getElementById('p-twist-on').checked = twistOn;
+        if (twistOn) {
+            const el = document.getElementById('p-twist');
+            el.value = randInt(5, 40);
+            updateLabel(el);
+        }
+        const roughOn = Math.random() < 0.25;
+        document.getElementById('p-roughen-on').checked = roughOn;
+        if (roughOn) {
+            const el = document.getElementById('p-roughen');
+            el.value = randInt(3, 25);
+            updateLabel(el);
+        }
+        document.querySelectorAll('.param-toggle input[type=checkbox]').forEach(cb => {
+            cb.closest('.param-toggle').classList.toggle('active', cb.checked);
+        });
+    }
+
+    function resetParams() {
+        const defs = {
+            'p-lineHeight':'1.30','p-letterSpacing':'1.05',
+            'p-strokeW':'2','p-contrast':'0','p-anchorPoints':'0',
+            'p-cornerRadius':'0','p-twist':'0','p-roughen':'0'
+        };
+        for (const [id, v] of Object.entries(defs)) {
+            const el = document.getElementById(id);
+            if (el) { el.value = v; updateLabel(el); }
+        }
+        document.getElementById('p-lineCap').value = 'round';
+        document.getElementById('p-direction').value = 'h';
+        document.getElementById('p-linearize').value = '0';
+        document.getElementById('p-twist-on').checked = false;
+        document.getElementById('p-roughen-on').checked = false;
+        document.querySelectorAll('.param-toggle input[type=checkbox]').forEach(cb => {
+            cb.closest('.param-toggle').classList.toggle('active', cb.checked);
+        });
+    }
+
+    // -------------------------------------------------------
+    //  パラメーター取得
+    // -------------------------------------------------------
+    function getCurrentParamsForSave() {
+        return {
+            lineHeight:    parseFloat(document.getElementById('p-lineHeight').value),
+            letterSpacing: parseFloat(document.getElementById('p-letterSpacing').value),
+            strokeW:       parseFloat(document.getElementById('p-strokeW').value),
+            lineCap:       document.getElementById('p-lineCap').value,
+            contrast:      parseFloat(document.getElementById('p-contrast').value),
+            anchorPoints:  parseFloat(document.getElementById('p-anchorPoints').value),
+            linearize:     parseFloat(document.getElementById('p-linearize').value),
+            cornerRadius:  parseFloat(document.getElementById('p-cornerRadius').value),
+            twist:         document.getElementById('p-twist-on').checked ? parseFloat(document.getElementById('p-twist').value) : 0,
+            roughen:       document.getElementById('p-roughen-on').checked ? parseFloat(document.getElementById('p-roughen').value) : 0,
+        };
+    }
+
+    // -------------------------------------------------------
+    //  保存（テキスト + パラメーター + embedding）
+    // -------------------------------------------------------
+    async function saveSample() {
+        const text = document.getElementById('text-input').value.trim();
+        if (!text) { alert('テキストを入力してください'); return; }
+
+        const params = getCurrentParamsForSave();
+
+        let embedding = null;
+        const btn = document.getElementById('save-sample-btn');
+        if (ImpressionModel.getApiKey()) {
+            btn.textContent = '取得中…';
+            btn.disabled = true;
+            try {
+                embedding = await ImpressionModel.getEmbedding(text);
+            } catch (e) {
+                console.warn('embedding取得エラー:', e);
+            }
+            btn.textContent = '保存';
+            btn.disabled = false;
+        }
+
+        const count = ImpressionModel.addSample(text, params, embedding);
+        if (count < 0) return;
+        updateSampleCount();
+        updateDistillStatus();
+        nextText();
+        randomizeParams();
+    }
+
+    function updateSampleCount() {
+        const samples = ImpressionModel.loadSamples();
+        document.getElementById('sample-count').textContent = samples.length;
+        const embCount = samples.filter(s => s.embedding).length;
+        let status = `${samples.length}件`;
+        if (embCount > 0) status += ` (embed:${embCount})`;
+        document.getElementById('model-status').textContent = status;
+    }
+
+    function exportImpressionData() {
+        const json = ImpressionModel.exportSamples();
+        const blob = new Blob([json], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'impression_samples.json';
+        a.click();
+    }
+
+    function importImpressionData(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (ImpressionModel.importSamples(reader.result)) {
+                updateSampleCount();
+                alert('インポートしました');
+            } else {
+                alert('データ形式が正しくありません');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    // -------------------------------------------------------
+    //  既存データにembedding付与
+    // -------------------------------------------------------
+    async function rebuildEmbeddings() {
+        if (!ImpressionModel.getApiKey()) { alert('APIキーを先に設定してください'); return; }
+        const samples = ImpressionModel.loadSamples();
+        const need = samples.filter(s => s.text && !s.embedding);
+        if (need.length === 0) { alert('全データにembeddingあり'); return; }
+        const overlay = document.getElementById('impression-overlay');
+        let done = 0;
+        for (const s of need) {
+            overlay.textContent = `embed付与中… ${++done}/${need.length}`;
+            try {
+                const emb = await ImpressionModel.getEmbedding(s.text);
+                if (emb) s.embedding = emb;
+            } catch (e) { console.warn('embed error:', e); }
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        ImpressionModel.saveSamples(samples);
+        updateSampleCount();
+        overlay.textContent = `✓ ${done}件にembed付与完了`;
+    }
+
+    // -------------------------------------------------------
+    //  パラメーター推薦の適用（滑らかアニメーション）
+    // -------------------------------------------------------
+    let _paramAnimId = null;
+
+    function applyRecommendedParams(params) {
+        if (!params) return;
+        if (_paramAnimId) cancelAnimationFrame(_paramAnimId);
+
+        const numTargets = {
+            'p-lineHeight':    params.lineHeight,
+            'p-letterSpacing': params.letterSpacing,
+            'p-strokeW':       params.strokeW,
+            'p-contrast':      params.contrast,
+            'p-anchorPoints':  params.anchorPoints,
+            'p-cornerRadius':  params.cornerRadius,
+            'p-twist':         params.twist || 0,
+            'p-roughen':       params.roughen || 0,
+        };
+
+        const starts = {};
+        for (const id of Object.keys(numTargets)) {
+            const el = document.getElementById(id);
+            starts[id] = el ? parseFloat(el.value) || 0 : 0;
+        }
+
+        // 離散パラメーターは即時適用
+        document.getElementById('p-lineCap').value = params.lineCap || 'round';
+        document.getElementById('p-linearize').value = params.linearize ? '1' : '0';
+
+        const twistOn = (params.twist || 0) > 0;
+        document.getElementById('p-twist-on').checked = twistOn;
+        const roughOn = (params.roughen || 0) > 0;
+        document.getElementById('p-roughen-on').checked = roughOn;
+        document.querySelectorAll('.param-toggle input[type=checkbox]').forEach(cb => {
+            cb.closest('.param-toggle').classList.toggle('active', cb.checked);
+        });
+
+        const duration = 400;
+        const startTime = performance.now();
+
+        function easeOut(t) { return 1 - (1 - t) * (1 - t); }
+
+        function formatVal(id, v) {
+            if (id === 'p-lineHeight' || id === 'p-letterSpacing') return v.toFixed(2);
+            if (id === 'p-strokeW') return v.toFixed(1);
+            if (id === 'p-anchorPoints') return (Math.round(v * 2) / 2).toFixed(1);
+            return Math.round(v).toString();
+        }
+
+        function tick(now) {
+            const elapsed = now - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            const ease = easeOut(t);
+
+            for (const [id, target] of Object.entries(numTargets)) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                const current = starts[id] + (target - starts[id]) * ease;
+                el.value = formatVal(id, current);
+                updateLabel(el);
+            }
+
+            if (t < 1) {
+                _paramAnimId = requestAnimationFrame(tick);
+            } else {
+                _paramAnimId = null;
+            }
+        }
+
+        _paramAnimId = requestAnimationFrame(tick);
+    }
+
+    // -------------------------------------------------------
+    //  リアルタイム自動推薦（LLM → k-NN）
+    // -------------------------------------------------------
+    let _autoTimer = null;
+
+    function setCanvasBlur(on) {
+        const container = document.getElementById('canvas-container');
+        if (on) {
+            // フォントサイズに応じてぼかし量を調整（大きい文字は強く、小さい文字は軽く）
+            const fontSize = parseFloat(document.getElementById('p-fontSize')?.value || 50);
+            const txt = document.getElementById('text-input')?.value || '';
+            const lines = txt.split('\n');
+            const maxLen = Math.max(1, ...lines.map(l => l.length));
+            const availW = container.clientWidth - 80;
+            const estSize = Math.min(availW / (maxLen * 1.05), fontSize * 5);
+            const blur = Math.max(3, Math.min(16, estSize * 0.08));
+            container.style.filter = `blur(${blur.toFixed(1)}px)`;
+        } else {
+            container.style.filter = 'blur(0px)';
+        }
+    }
+
+    async function autoSuggest() {
+        const overlay = document.getElementById('impression-overlay');
+        const mode = document.getElementById('predict-mode').value;
+        const container = document.getElementById('canvas-container');
+        try {
+            const text = document.getElementById('text-input').value;
+            if (!text.trim()) { overlay.textContent = ''; setCanvasBlur(false); return; }
+
+            const apiKey = ImpressionModel.getApiKey();
+            if (!apiKey) {
+                overlay.textContent = '⚠ 設定パネル下部にOpenAI APIキーを入力';
+                return;
+            }
+
+            setCanvasBlur(true);
+
+            if (mode === 'hybrid') {
+                // ── ハイブリッドモード (k-NN類似検索 → LLM微調整) ──
+                overlay.textContent = '⏳ ハイブリッド分析中…';
+
+                const result = await ImpressionModel.predictByHybrid(text, msg => {
+                    overlay.textContent = msg;
+                });
+
+                if (result && result.params) {
+                    applyRecommendedParams(result.params);
+                    overlay.textContent = '✓ [hybrid] ' + (result.reasoning || '推論完了');
+                    setCanvasBlur(false);
+                    return;
+                }
+
+                const hErr = result ? (result.error || '') : '';
+                overlay.textContent = '⚠ hybrid: ' + hErr;
+                setCanvasBlur(false);
+
+            } else if (mode === 'knn') {
+                // ── k-NN モード ──
+                overlay.textContent = '⏳ k-NN: embedding取得中…';
+                const embedding = await ImpressionModel.getEmbedding(text);
+                const samples = ImpressionModel.loadSamples();
+                const embCount = samples.filter(s => s.embedding).length;
+                if (!embedding) {
+                    overlay.textContent = '⚠ k-NN: embedding取得失敗';
+                    setCanvasBlur(false);
+                    return;
+                }
+                if (embCount === 0) {
+                    overlay.textContent = '⚠ k-NN: 学習データにembeddingなし（embed付与してください）';
+                    setCanvasBlur(false);
+                    return;
+                }
+                const knnResult = ImpressionModel.predictByEmbedding(embedding, samples);
+                if (knnResult && knnResult.params) {
+                    applyRecommendedParams(knnResult.params);
+                    overlay.textContent = '✓ [k-NN] ' + knnResult.reasoning;
+                } else {
+                    overlay.textContent = '⚠ k-NN: 類似テキストなし (embed:' + embCount + '件)';
+                }
+                setCanvasBlur(false);
+            } else {
+                // ── LLM モード（フォールバック: k-NN）──
+                overlay.textContent = '⏳ LLM分析中…';
+
+                const result = await ImpressionModel.predictByLLM(text, msg => {
+                    overlay.textContent = msg;
+                });
+                console.log('predictByLLM result:', JSON.stringify(result).substring(0, 300));
+
+                if (result && result.params) {
+                    applyRecommendedParams(result.params);
+                    overlay.textContent = '✓ [LLM] ' + (result.reasoning || '推論完了');
+                    setCanvasBlur(false);
+                    return;
+                }
+
+                const errMsg = result ? (result.error || JSON.stringify(result).substring(0, 50)) : 'null返却';
+                overlay.textContent = '⚠ LLM: ' + errMsg + ' → k-NNフォールバック…';
+
+                const embedding = await ImpressionModel.getEmbedding(text);
+                const samples = ImpressionModel.loadSamples();
+                const embCount = samples.filter(s => s.embedding).length;
+
+                if (embedding && embCount > 0) {
+                    const knnResult = ImpressionModel.predictByEmbedding(embedding, samples);
+                    if (knnResult && knnResult.params) {
+                        applyRecommendedParams(knnResult.params);
+                        overlay.textContent = '✓ [k-NN] ' + knnResult.reasoning;
+                        setCanvasBlur(false);
+                        return;
+                    }
+                    overlay.textContent = '⚠ k-NN: 類似テキストなし (embed:' + embCount + '件)';
+                } else {
+                    overlay.textContent = '⚠ k-NN: embed=' + embCount + '件 / LLM: ' + errMsg;
+                }
+                setCanvasBlur(false);
+            }
+        } catch (e) {
+            console.error('autoSuggest error:', e);
+            overlay.textContent = '❌ エラー: ' + e.message;
+            setCanvasBlur(false);
+        }
+    }
+
+    document.getElementById('text-input').addEventListener('input', () => {
+        setCanvasBlur(true);
+        clearTimeout(_autoTimer);
+        _autoTimer = setTimeout(() => { autoSuggest(); }, 500);
+    });
+
+    // モード切替時に即座に再推論
+    document.getElementById('predict-mode').addEventListener('change', () => {
+        const text = document.getElementById('text-input').value;
+        if (!text.trim()) return;
+        clearTimeout(_autoTimer);
+        _autoTimer = setTimeout(() => { autoSuggest(); }, 100);
+    });
+
+    // -------------------------------------------------------
+    //  APIキー管理
+    // -------------------------------------------------------
+    const apiKeyInput = document.getElementById('api-key-input');
+    apiKeyInput.value = ImpressionModel.getApiKey();
+    apiKeyInput.addEventListener('change', () => {
+        ImpressionModel.setApiKey(apiKeyInput.value);
+    });
+
+
+    // -------------------------------------------------------
+    //  蒸留（Prompt Distillation）
+    // -------------------------------------------------------
+    async function runDistill() {
+        const statusEl = document.getElementById('distill-status');
+        const overlay = document.getElementById('impression-overlay');
+        if (!ImpressionModel.getApiKey()) {
+            alert('APIキーを先に設定してください');
+            return;
+        }
+        statusEl.textContent = '蒸留実行中…';
+        overlay.textContent = '⏳ 蒸留中… 全データを分析しています';
+
+        const result = await ImpressionModel.distillRules(msg => {
+            overlay.textContent = msg;
+        });
+
+        if (result && result.rules) {
+            statusEl.textContent = `✓ 蒸留完了 (${result.sampleCount}件から抽出)`;
+            overlay.textContent = '✓ 蒸留完了 — ルールがプロンプトに反映されます';
+            console.log('Distilled rules:\n', result.rules);
+        } else {
+            const err = result ? result.error : '不明なエラー';
+            statusEl.textContent = '⚠ 蒸留失敗: ' + err;
+            overlay.textContent = '⚠ 蒸留失敗: ' + err;
+        }
+    }
+
+    function showDistilledRules() {
+        const stored = ImpressionModel.loadDistilledRules();
+        const modal = document.getElementById('rules-modal');
+        const textEl = document.getElementById('rules-text');
+        if (!stored || !stored.rules) {
+            textEl.textContent = 'まだ蒸留されていません。\n「蒸留（ルール抽出）」ボタンを押してください。';
+        } else {
+            const date = new Date(stored.timestamp);
+            const header = `[${stored.sampleCount}件のデータから抽出 — ${date.toLocaleString('ja-JP')}]\n\n`;
+            textEl.textContent = header + stored.rules;
+        }
+        modal.style.display = 'flex';
+    }
+
+    function updateDistillStatus() {
+        const statusEl = document.getElementById('distill-status');
+        const stored = ImpressionModel.loadDistilledRules();
+        if (stored) {
+            const ago = Math.round((Date.now() - stored.timestamp) / 60000);
+            const agoStr = ago < 60 ? `${ago}分前` : `${Math.round(ago / 60)}時間前`;
+            statusEl.textContent = `蒸留済み (${stored.sampleCount}件, ${agoStr})`;
+            if (ImpressionModel.needsRedistill()) {
+                statusEl.textContent += ' — 再蒸留推奨';
+            }
+        } else {
+            const count = ImpressionModel.loadSamples().length;
+            if (count >= 10) {
+                statusEl.textContent = '未蒸留 — 「蒸留」ボタンを押してください';
+            } else {
+                statusEl.textContent = `データ ${count}/10件（蒸留には10件以上必要）`;
+            }
+        }
+    }
+
+    // キャンバスクリックでテキスト入力にフォーカス
+    document.getElementById('canvas-container').addEventListener('click', () => {
+        document.getElementById('text-input').focus();
+    });
+
+    // 初期化 — 旧形式データ削除
+    ImpressionModel.cleanupOldKeys();
+    updateSampleCount();
+    updateDistillStatus();
+    </script>
+    <script src="sketches/sketch1/sketch.js"></script>
+</body>
+</html>

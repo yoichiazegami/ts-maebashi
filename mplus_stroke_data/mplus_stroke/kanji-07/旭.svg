@@ -1,0 +1,3 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" height="100px" version="1.0" viewBox="0 0 100 100" width="100px" x="0px" y="0px">
+<line fill="none" stroke="#000000" stroke-width="2" x1="50.5" x2="86.5" y1="38" y2="38" /><polyline fill="none" points="50.5,66 87.5,66 87.5,11 49.5,11 49.5,67" stroke="#000000" stroke-width="2" /><path d="M2.5,92 c11.52,-12.095 19,-34.19 19,-63 v-25.0" fill="none" stroke="#000000" stroke-width="2" /><path d="M5,24 h33.5 v59.0 c0,6.527 0.631,7 26.5,7 c28.981,0 29.217,-0.245 30.5,-31" fill="none" stroke="#000000" stroke-width="2" /></svg>
