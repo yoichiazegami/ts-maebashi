@@ -8,9 +8,9 @@ const sketch1 = (p) => {
     let textArea;
 
     const PADDING = 40;
-    const LATIN_SCALE = 1.12;
-    const LATIN_Y_OFFSET = 0.10;
-    const LATIN_SPACING = 0.4;
+    const LATIN_SCALE = 1.25;
+    const LATIN_Y_OFFSET = 0.05;
+    const LATIN_SPACING = 0.8;
 
     function isLatin(ch) {
         const c = ch.charCodeAt(0);
@@ -113,13 +113,12 @@ const sketch1 = (p) => {
                     let latin = isLatin(ch);
                     let cy = sy + ci * charW * params.scaleY;
                     let chSize = latin ? fontSize * LATIN_SCALE : fontSize;
-                    let chSw = latin ? sw * LATIN_SCALE : sw;
                     let seed = ch.charCodeAt(0) * 7919 + ci * 173 + li * 59;
 
                     if (strokeData && strokeData[ch]) {
-                        drawChar(ctx, strokeData[ch], cx, cy, chSize, chSw, '#1a1a1a', params, seed);
+                        drawChar(ctx, strokeData[ch], cx, cy, chSize, sw, '#1a1a1a', params, seed);
                     } else if (font && font.font) {
-                        drawOutlineChar(ctx, font.font, ch, cx, cy, chSize, chSw, '#1a1a1a', params, seed);
+                        drawOutlineChar(ctx, font.font, ch, cx, cy, chSize, sw, '#1a1a1a', params, seed);
                     }
                 }
             }
@@ -147,13 +146,12 @@ const sketch1 = (p) => {
                     let cx = curX + cw * params.scaleX / 2;
                     let chY = latin ? cy + fontSize * LATIN_Y_OFFSET : cy;
                     let chSize = latin ? fontSize * LATIN_SCALE : fontSize;
-                    let chSw = latin ? sw * LATIN_SCALE : sw;
                     let seed = ch.charCodeAt(0) * 7919 + ci * 173 + li * 59;
 
                     if (strokeData && strokeData[ch]) {
-                        drawChar(ctx, strokeData[ch], cx, chY, chSize, chSw, '#1a1a1a', params, seed);
+                        drawChar(ctx, strokeData[ch], cx, chY, chSize, sw, '#1a1a1a', params, seed);
                     } else if (font && font.font) {
-                        drawOutlineChar(ctx, font.font, ch, cx, chY, chSize, chSw, '#1a1a1a', params, seed);
+                        drawOutlineChar(ctx, font.font, ch, cx, chY, chSize, sw, '#1a1a1a', params, seed);
                     }
                     curX += cw * params.scaleX;
                 }

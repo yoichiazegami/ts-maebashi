@@ -1,0 +1,592 @@
+um so at this time our next speaker is
+Mary is it Faber or
+Farber okay I'm just asking because it's
+spelled so simply uh product and brand
+designer originally from uh New Zealand
+is actually located here in Brisbane and
+she's going to be speaking about AI
+generated fonts and hopefully future
+advancements let's see what she has to
+say thank
+you okay amazing it's the time has come
+uh unfortunately I couldn't get AI to
+present this for me uh that would have
+been really fantastic but you'll just
+have to deal with me in the
+meantime uh a little bit about me just
+quickly I love the world of
+typography uh some photos with some
+famous people in type Jessica he some
+Delon mug people Mar and Benes and I
+love the history of fonts too and so on
+the letter press machine doing some hand
+leathering some carving into stone uh
+pretty much love it
+all uh I now work as a brand and product
+designer at a place called Joseph Mark
+they're here in Brisbane um and yes I'm
+from New Zealand I actually did recently
+move back to New Zealand but was living
+in Brisbane for two years uh now we
+don't often design custom font at of
+Mark but we do do custom logo types now
+and then and obviously typography is a
+huge part of what we do so um I'm the
+one that's selling the fonts to the
+clients so you're
+welcome okay so could AI be the future
+of font design this is a really big
+question um probably should have put a
+few extra question marks after that uh
+but uh that's kind of what I set out to
+look at um but I have to preface with a
+couple of things first of all AI
+expert I am not um I have uh worked with
+quite a few AI tools we integrate AI
+tools into our workflows as much as we
+can where I work at present um so as
+much as I know my way around some of the
+tools I don't write the
+models uh secondly font design expert
+again I mean I do try um and I did work
+uh about 10 years ago I worked for a
+year at a Foundry in London called
+Dalton M um and the main project I
+worked on while I was there was one
+called Intel clear celic no I don't
+speak Russian uh but so I guess I have
+some knowledge about the process of
+Designing fonts for like commercial use
+and what goes into that so I do have a
+level of understanding coming
+in can't cover font engineering uh
+simply no time and if I could uh it
+wouldn't be me doing that talk it would
+be somebody else giving that talk so
+unfortunately can't cover that today and
+last but not least uh copyright and
+plagiarism again not enough time so
+fortunately a talk after M which you
+might have seen on the program is
+covering this so I was very I was very
+lucky to see that uh because that's yeah
+another kettle of fish and epic says if
+you wish to improve be content to appear
+clueless or stupid and luckily for you
+I'm prepared to do that today so um
+let's get into it taking a look at the
+current state of affairs when it comes
+to AI so most of you will know uh at the
+moment crafting new professional type
+faces remains a meticulous and timec
+consuming Endeavor even with modern
+software and uh I guess the premise is
+that if AI could increase the speed at
+which well-crafted fonts are produced or
+perhaps that which variations of forms
+are explored it could significantly
+change the font design design landscape
+now current advances in the area
+Revolution are happening on more
+pixel-based formats so the top is a a
+video production by AI from about a year
+ago and that's uh The Prompt was Will
+Smith eating spaghetti and I think we
+can all agree it's quite horrendous and
+shocking but the bottom video
+productions are from more recent ones
+from uh a generator called SOA soaa and
+these are far more convincing admittedly
+cherry-picked from some of the you know
+from some of the good ones uh but
+nevertheless the level of realism is is
+Extreme and so these advances are
+happening at a pretty rapid rate uh the
+issue is vector graphics which are
+integral to font design uh they're
+moving at a much slower Pace with only a
+handful of papers surfacing last year um
+and for the next slide or two I'm
+referencing an online article but um by
+Philip Pala and Jamie Clark um and
+that's from the end of this year so I'd
+actually started doing my talk and then
+stumbled across this article and I was
+like oh I need to change a few things
+and that is the nature of AI because
+I've had discussions with a lot of
+people in this room over the last day or
+two and already I want to change slides
+in here um especially after hearing Yung
+Yin speak yesterday Simon's talk um was
+about to add a few few of his slides in
+but I thought I better stick to what I
+had so significant progress is occurring
+in what is known as few sh shot font
+generation tasks so basically AI
+learning a font style from a small set
+of initial characters and then
+extrapolating that knowledge to create
+an entire font and that's kind of what
+was touched upon in the talk yesterday
+with the cjk characters um but I can
+confirm it is happening for Latin there
+was a question posed um and it was is
+this happening for Latin type faces as
+well and this particular paper did look
+at applying it to Latin forms now I'll
+admit I'm not picking any of those fonts
+of the Shelf um and uh probably better
+on maybe a defont website but
+nevertheless these were basically
+created by inputting a few glyphs and
+then extrapolating from that the
+knowledge and then creating kind of
+fully-fledged glyph sets so um and these
+are like copyable vector fonts um and
+this is a program called or or a model
+called jeel vector and I kind of dive a
+little bit deeper into this um because
+this was pretty much the top of what I
+could find out there for Vector
+vectorizing fonts at the moment in terms
+of what's happening with
+AI so this is a kind of a closer look at
+what's happening and uh basically the
+top line is the kind of input font this
+is what we're trying to achieve
+basically a slab syif nothing too fancy
+going on and so the A and the B that are
+kind of outlined in the top left red
+those were the input glyphs and then
+they will run through these different
+models here and so the second one down
+is this dual vector and uh so basically
+you've got two glyphs input it and then
+extrapolate an entire glyph set from
+that and so it's not perfect and there's
+some kind of weird things happening like
+the tail on the JS um and some kind of
+where the curves are happening there's
+some kind of weird stuff happening at
+the top of the G there but in terms of
+uh developments from some previous
+models which are shown below so you've
+got these other like I don't know how to
+say it at2 R2 F and I am to ve um some
+of these previous Explorations are far
+more rudimentary and distorted so I
+think what dual Vector has done is about
+the closest we've got um and so I think
+if you look at it from a lens of okay
+I'm still not going to use that and
+where are the where are the nodes place
+and can I use it for mult mle Masters
+probably not but if you think of that
+being the new standard and then that
+being the on the Bottom Rung what are
+the iterations that are going to happen
+getting closer and closer to the output
+that you're after so um I think the
+developments that are happening uh could
+progress um and be something that is
+usable uh again same same model so same
+framework but looking at an italic um
+which has probably got a bit more uh
+idiosyncrasy going on particularly with
+like the double story G that's probably
+one of the hardest characters here for
+them to kind of replicate but if you
+look at some of the terminals and some
+of the thicks and thins that are
+happening again the Dual Vector is doing
+a reasonable job of it and yeah again
+still not quite there in terms of what
+you would want on a commercial scale but
+I think the improvements kind of speak
+for themselves when you see them all
+together up
+here now I'm I am not the one to explain
+this but I thought for any of the
+technical people in the room that it
+would be important for me to include
+this slide and attempt to explain it at
+least on a very rudimentary level
+basically it works similarly to what I
+understood Simon saying yesterday and
+basically it's compiling vectors
+together pieces of vectors together one
+over the other kind of like components
+coming together and then it's also got
+this kind of image Branch so like a
+predictable model of what the like a
+rasid image would look like of a letter
+form and then when you combine those
+things and compile those two things
+together it can kind of use the image of
+the reference as the final output that
+we want to achieve and then kind of
+adjust the vectors to to fit that more
+closely rather than being solely Vector
+based um and so I think Pro probably and
+I don't know because I haven't seen the
+outlines of these fonts uh there's
+probably uh a few more nodes than what
+we wanting and probably you might spend
+more time at this point editing what any
+output was rather than actually saving
+time probably quicker to draw it from
+scratch but I think this level of
+progression that's happening um it's
+certainly something to look out for and
+consider moving
+forward okay so that's about as far as
+it gets in terms of font design
+specifically and vectors but I thought
+because that was kind of as far as I
+could get with it I also wanted to look
+at what's happening in the world of
+typography so lettering as well because
+that's something that you know AI
+conference is about lettering too and I
+thought hey this is something that we
+can explore as well so image-based
+applications and typography are evolving
+at a rapid rate so decorative lettering
+outputs are now a prompt away um and
+also uh really AI is only going to be as
+good as how it's integrated into tools
+that everyday designers can use if
+they're not readily available they're
+not going to be in use so I started to
+have a look at what's currently out
+there so in March 23 Adobe Firefly AA
+art generator was released and this is
+um just quickly an illustrator the text
+to Vector graphic tool then uh canva in
+December of last year released magic
+studio um and this is a tool called
+Magic morph basically input a letter
+form and then add a prompt I want it to
+look like a balloon and then it creates
+this so in the past this might have been
+an art directed photo shoot and maybe
+you needed to have a balloon that was in
+a PE shape maybe you had to get it
+custom made uh who knows but now it's
+kind of a prompt
+away uh these are some outputs from mid
+Journey uh 2022 36 Days of type um uh
+sorry the the 36 Days of type is from
+last year but mid Journey was released
+in 22 uh and I imagine having used my
+journey a bit myself that these would
+have taken quite a few iterations
+because uh when you are using AI it's
+almost like the outcomes can almost be
+um not quite what you're expecting but
+then you have to add quite a lot of
+levels of refinement but in terms of
+these being final outputs for a lead
+earing project I think it's pretty
+impressive um and not having to use 3D
+software in order to do this um is a
+huge
+timesaver so I had to have a go um now
+again not an expert and uh I needed a
+cover page for my talk and I thought
+what would be a big challenge for AI is
+probably creating a really clean sense
+serif rather than a decorative letter
+form so I thought okay I don't have the
+vector output tools at my disposal but I
+do have some of the image creation tools
+at my disposal so let's try and create a
+cover page for this talk Adobe
+Illustrator I asked s Ser uppercase
+letter m
+ooh okay um can't say I was going to use
+one of those for the cover of my talk uh
+I was like all right all right all right
+I got the prompt wrong let's trag in uh
+letter M black clean in the style of
+helvetica don't shoot me I heard the
+last talk but I was like if if they're
+going to know a Sans serif grotesque
+what's what's a well-known one that the
+computer might
+recognize oh okay um things got worse so
+uh this is a closeup of the one that was
+probably the best of the bunch um and if
+you look at where the vector points are
+placed um I would spend more time
+cleaning this up than if I'd drawn it
+from scratch so that was out the window
+I turned to Mid Journey um and the
+prompt is Le m helvetica style uh white
+background okay um we're still not
+getting it um I don't know where the
+serifs came from but they're there I
+added to the prompt with no serifs or
+detail still not hitting the mark does
+doesn't listen does not listen um these
+were some more trials the bottom right
+is about the closest we got but still
+not quite what I was after so let's try
+something else uh I wanted to create my
+name and have some lowercase letter
+forms I was like that would be cool
+let's see what we can do I used the
+blend tool so combining a few different
+letter forms and then getting an output
+this was not bad so this was four
+outputs and then the bottom right I
+don't know where the outlines came from
+but the bottom right was the best one
+and I zoomed into that and I thought oh
+I upscaled it and I was like yeah like
+if this is image based but if I could
+convert the vectors uh convert the image
+to vectors I was like this is pretty
+good then I tried a lowercase a and
+bearing in mind I input lowercase days
+um it was all downhill from there so the
+M got my hopes up it really really did
+uh I don't know what's happening here uh
+I could go on and on about what's wrong
+with it but certainly nothing's right
+about it uh same with the r it got worse
+um so nothing good to see here and then
+why um I really special um uh an n and
+some y inside a V and a T and A Y so um
+yeah it just kind of progressively went
+downhill so I became map and uh the best
+I could be was about this Mary with a
+little te so I could be Mt if if you
+prefer okay I turned to Dary that's
+another image generation tool and uh
+same kind of
+prompts um I think I preferred mid
+journey serifs to what this was giving
+me uh then I tried some more prompts
+again it got worse so darly was not the
+one at the end of the day and then I
+thought is it just me do I not know what
+I'm doing but these are some other
+prompts in mid Journey from someone else
+and what they're trying to create sure
+like there's some interesting nice
+things happening here but their prompts
+did not match up with their outputs not
+even close and I saw how many iterations
+they were trying and it was like me stab
+in the dark stab in the dark stab in the
+dark this was a hilarious one that
+someone had tried and basically amazing
+output of the Muppets band but if we
+zoom into what's happening with the type
+on the drum what is going on it's like
+you can get everything else right but
+type is not
+trained okay so where do we go from here
+um looked at some online conversations
+um very varied in uh opinions on what
+might be achievable sometimes quite
+polar takes whether or not these shifts
+are going to be positive or not um but
+the impending shifts seem to be
+undeniable these are some predictions of
+the medium-term impact of AI on type
+design kind of two main scenarios that
+were kind of appearing so the first is
+fully AI generated fonts fonts on the
+fly so kind of input a prompt something
+comes out I see this being something
+that could happen and I don't think the
+fonts are going to be particularly great
+but they might be the kind of thing that
+rudimentary people coming in with not a
+lot of font design knowledge would use
+all the time it would be like daffon on
+steroids um because you wouldn't even
+have to search for fonts anymore you'd
+just type in a prompt I see it happening
+not ideal for font designers but they
+will lack
+craftsmanship so the second one is AI is
+co-pilot so basically AI takes on the
+heavy lifting in the traditionally
+arduous tasks and that's kind of what
+Simon spoke about yesterday it's like
+give us some basic beautiful characters
+to go off and we'll extrapolate that for
+you and I think that done well and
+leveraging AI in that manner could be a
+great outcome for type designers because
+it could mean some really beautiful
+fonts uh created at a at a faster
+rate this was a guy who said the the
+third one could be fonts are no longer
+needed so I don't know if that's utopian
+or dystopian for me it would be
+dystopian uh but imagine a world where
+lettering isn't static but dynamically
+adapts to context a level of flexibility
+and precision that goes beyond what
+current fonts offer and admittedly I
+think that would take a hugely long time
+but it's interesting to see the opinions
+on where this could
+go so a successful outcome I think for
+all would take industry professionals
+behind the tool developments to power
+the best font design outcomes and to
+implement mechanisms to safeguard
+against plagiarism that way as The
+Gatekeepers and drivers they would then
+stand to gain the most from future AI
+developments okay last harah I still
+needed a cover for this talk back to Mid
+Journey it was went to the vector and
+it's it's worse again I couldn't believe
+it um so and I don't know where this
+little guy down the bottom came from um
+but I couldn't use any of that uh so I
+decided to go down the creative
+lettering route rather than try and
+create a sand serif because clearly
+that's not the game that we're playing
+uh so I had real I had quite a lot of
+fun and this was just one evening at
+home playing around I'm not a 3D artist
+but these are some outputs that I
+managed to get I do love what's
+happening in the bottom left here this
+kind of glassy effect on the M but I
+decided to go with this one on the end
+because it felt like kind of warped kind
+of not quite right kind of interesting
+and unusual and adaptive and I kind of
+feel like that's where we're at with AI
+at the
+moment so uh could AI be the future of
+font design I think arguably yes I I
+think it's it's coming um but based on
+what I've found so far AI is not my type
+yet thank you
+[Applause]
+thank you very much and because we
+started about five minutes late we have
+some time for questions oh great
+sorry thank you so much um so uh a few
+months ago um there there was a tweet on
+Twitter I'm never gonna say I'm never
+going to call it X um in Japan that went
+viral that um how to distinguish like AI
+picture or the real picture is uh to
+look at type because AI is now as you
+shown really terrible at uh creating
+types and um well it will get better
+soon and then um as a as a type people
+in in the field we probably may have to
+think about that uh um pressure on us
+too because now that's also how to
+distinguish how people distinguish the
+correct information or not so I guess
+that's another thing we need to think
+about yeah what what um I totally agree
+um and I guess that is starting to go
+into the kind of uh plagiarism
+discussion because it's going to be is
+this something that someone's created is
+has this been ripped off from someone um
+and it is I think it is a slippery slope
+because it can be really difficult to
+disting between what's been created by
+Ai and what hasn't and certainly uh I've
+been using a lot for kind of more
+photography based applications in my
+work and it really it is quite shocking
+like you almost can't tell and
+originally with with photography at
+least the hands were a giveaway it's
+like the hands looked really warped but
+even in in the last year that's improved
+a bunch so I think the sad answer is it
+will be very difficult to distinguish
+between the two in
+future another question
+question so my theory with the AI is
+because it draws from so many
+copyrighted sources all bunched in
+together that eventually the AI is going
+to have to be monitored by if not a
+human then another Ai and so what we end
+up with is this Loop of the AI
+monitoring the AI monitoring deeper and
+deeper and
+deeper is this something you've thought
+about yourself and and do you have any
+thoughts on
+that I mean personally I'm no expert
+like I said I think uh that's something
+that can definitely happen I think uh a
+side note to that kind of a s side step
+is something I've thought about is uh
+what happens when uh there's no more new
+inputs being being done because
+everyone's like well AI is just going to
+knock keep knocking things out and I had
+this discussion with a few people in the
+audience already uh if you don't have
+the source material to create anything
+new then it's all just going to be the
+same and recycled and homogeneous and
+there won't be anything new so I think I
+think that's probably where the value
+for font foundaries will still lie is
+creating beautiful Source material and
+in fact maybe it will be worth more
+because there will be far less Source
+material to go from um if we are using
+those as reference
+I also think maybe the tools um should
+they be open source for font design or
+should they be something that happens
+inhouse so that you've got the tools to
+use with your own font designs but you
+are not allowed to use them with other
+people's I don't know fude for thought
+thank you very
+much I have one last question
+did I sorry did I just hear you say that
+the value of foundaries in the future is
+to create Source material for
+AI no well I think the the the value
+will be that their Source material could
+then be sold for people who are wanting
+to use AI who's buying the data for AI
+aren't they just hoovering it up well
+this is the thing this is why I'm
+thinking maybe the models that people
+are using are not open source maybe they
+are like Vector based ones because at
+the moment I I don't have access other
+than Adobe text to illustrator thing
+that I tried earlier uh the the like the
+jewel vector and stuff it's not a
+readily available tool to public so I'm
+thinking maybe these are tools that
+could be used by foundaries in and of
+their own with their own products so
+like the extrapolating from a few letter
+forms out you can only do that with your
+own fonts but putting roadblocks up from
+other people put putting it out there
+that's another kettle of fish that's
+that's a whole can of
+worms thank you very much we will be
+moving into our NE thank you
+[Applause]
+thanks
+e for
