@@ -8,6 +8,14 @@ const sketch1 = (p) => {
     let textArea;
 
     const PADDING = 40;
+    const LATIN_SCALE = 1.12;
+    const LATIN_Y_OFFSET = 0.10;
+    const LATIN_SPACING = 0.4;
+
+    function isLatin(ch) {
+        const c = ch.charCodeAt(0);
+        return c <= 0x024F || (c >= 0xFF01 && c <= 0xFF5E && /[A-Za-z0-9]/.test(String.fromCharCode(c - 0xFEE0)));
+    }
 
     // ----------------------------------------------------------
     //  preload / setup / resize
@@ -102,13 +110,16 @@ const sketch1 = (p) => {
 
                 for (let ci = 0; ci < line.length; ci++) {
                     let ch = line[ci];
+                    let latin = isLatin(ch);
                     let cy = sy + ci * charW * params.scaleY;
+                    let chSize = latin ? fontSize * LATIN_SCALE : fontSize;
+                    let chSw = latin ? sw * LATIN_SCALE : sw;
                     let seed = ch.charCodeAt(0) * 7919 + ci * 173 + li * 59;
 
                     if (strokeData && strokeData[ch]) {
-                        drawChar(ctx, strokeData[ch], cx, cy, fontSize, sw, '#1a1a1a', params, seed);
+                        drawChar(ctx, strokeData[ch], cx, cy, chSize, chSw, '#1a1a1a', params, seed);
                     } else if (font && font.font) {
-                        drawOutlineChar(ctx, font.font, ch, cx, cy, fontSize, sw, '#1a1a1a', params, seed);
+                        drawOutlineChar(ctx, font.font, ch, cx, cy, chSize, chSw, '#1a1a1a', params, seed);
                     }
                 }
             }
@@ -122,19 +133,29 @@ const sketch1 = (p) => {
             for (let li = 0; li < lines.length; li++) {
                 let line = lines[li];
                 let cy = startY + li * lineH * params.scaleY;
-                let lineW = line.length * charW * params.scaleX;
-                let sx = (p.width - lineW) / 2 + charW * params.scaleX / 2;
+
+                let lineW = 0;
+                for (let ci = 0; ci < line.length; ci++) {
+                    lineW += isLatin(line[ci]) ? charW * LATIN_SPACING * params.scaleX : charW * params.scaleX;
+                }
+                let curX = (p.width - lineW) / 2;
 
                 for (let ci = 0; ci < line.length; ci++) {
                     let ch = line[ci];
-                    let cx = sx + ci * charW * params.scaleX;
+                    let latin = isLatin(ch);
+                    let cw = latin ? charW * LATIN_SPACING : charW;
+                    let cx = curX + cw * params.scaleX / 2;
+                    let chY = latin ? cy + fontSize * LATIN_Y_OFFSET : cy;
+                    let chSize = latin ? fontSize * LATIN_SCALE : fontSize;
+                    let chSw = latin ? sw * LATIN_SCALE : sw;
                     let seed = ch.charCodeAt(0) * 7919 + ci * 173 + li * 59;
 
                     if (strokeData && strokeData[ch]) {
-                        drawChar(ctx, strokeData[ch], cx, cy, fontSize, sw, '#1a1a1a', params, seed);
+                        drawChar(ctx, strokeData[ch], cx, chY, chSize, chSw, '#1a1a1a', params, seed);
                     } else if (font && font.font) {
-                        drawOutlineChar(ctx, font.font, ch, cx, cy, fontSize, sw, '#1a1a1a', params, seed);
+                        drawOutlineChar(ctx, font.font, ch, cx, chY, chSize, chSw, '#1a1a1a', params, seed);
                     }
+                    curX += cw * params.scaleX;
                 }
             }
         }
