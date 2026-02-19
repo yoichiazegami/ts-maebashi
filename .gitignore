@@ -6,3 +6,4 @@ test_settings.js
 *_TEST_REPORT.md
 TEST_REPORT.md
 TEST_SUMMARY.md
+data/impression_samples*.json

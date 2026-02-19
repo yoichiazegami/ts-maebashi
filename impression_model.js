@@ -960,9 +960,29 @@ k-NNでは捉えきれないルールを明文化してください。
         }
     }
 
+    let _defaultSamplesLoaded = false;
+
     function loadSamples() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
         catch { return []; }
+    }
+
+    async function ensureDefaultSamples() {
+        if (_defaultSamplesLoaded) return;
+        _defaultSamplesLoaded = true;
+        const existing = loadSamples();
+        if (existing.length > 0) return;
+        try {
+            const res = await fetch('data/default_samples.json');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                saveSamples(data);
+                console.log(`デフォルトデータ ${data.length}件をロードしました`);
+            }
+        } catch (e) {
+            console.warn('デフォルトデータの読み込みに失敗:', e);
+        }
     }
     function saveSamples(samples) {
         try {
@@ -1152,5 +1172,6 @@ JSON配列のみ出力。説明不要。`
         importSamples,
         clearSamples,
         cleanupOldKeys,
+        ensureDefaultSamples,
     };
 })();

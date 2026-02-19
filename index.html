@@ -850,10 +850,12 @@
         document.getElementById('text-input').focus();
     });
 
-    // 初期化 — 旧形式データ削除
+    // 初期化
     ImpressionModel.cleanupOldKeys();
-    updateSampleCount();
-    updateDistillStatus();
+    ImpressionModel.ensureDefaultSamples().then(() => {
+        updateSampleCount();
+        updateDistillStatus();
+    });
     </script>
     <script src="sketches/sketch1/sketch.js"></script>
 </body>
