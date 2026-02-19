@@ -53,29 +53,30 @@ body {
 #api-key-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 12px;
-    background: #f8f8f8;
+    gap: 6px;
+    padding: 6px 12px;
     border-bottom: 1px solid #e8e8e8;
+    background: #fff;
     flex-shrink: 0;
 }
 
 #api-key-bar label {
     font-size: 11px;
-    color: #888;
+    color: #999;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 #api-key-bar .api-key-field {
     flex: 1;
-    max-width: 320px;
-    font-size: 12px;
-    padding: 3px 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Hiragino Sans', sans-serif;
+    font-size: 13px;
+    padding: 4px 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     outline: none;
-    font-family: inherit;
+    line-height: 1.4;
+    height: 28px;
 }
 
 #api-key-bar .api-key-field:focus {
