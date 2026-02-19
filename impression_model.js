@@ -142,12 +142,28 @@ const ImpressionModel = (() => {
     //  全サンプルをLLMに分析させてテキスト↔パラメーターの
     //  関係性ルールを言語化し、localStorage に保存
     // -------------------------------------------------------
+    let _defaultRules = null;
+
     function loadDistilledRules() {
         try {
             const stored = JSON.parse(localStorage.getItem(DISTILL_KEY));
             if (stored && stored.rules && stored.sampleCount) return stored;
-            return null;
-        } catch { return null; }
+        } catch { /* fall through */ }
+        return _defaultRules;
+    }
+
+    async function ensureDefaultRules() {
+        if (_defaultRules) return;
+        const stored = localStorage.getItem(DISTILL_KEY);
+        if (stored) return;
+        try {
+            const res = await fetch('data/default_rules.json');
+            if (!res.ok) return;
+            _defaultRules = await res.json();
+            console.log('デフォルト蒸留ルールをロードしました');
+        } catch (e) {
+            console.warn('デフォルトルールの読み込みに失敗:', e);
+        }
     }
 
     function saveDistilledRules(data) {
@@ -1173,5 +1189,6 @@ JSON配列のみ出力。説明不要。`
         clearSamples,
         cleanupOldKeys,
         ensureDefaultSamples,
+        ensureDefaultRules,
     };
 })();

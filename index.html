@@ -10,6 +10,10 @@
 <body>
     <div id="app-wrapper">
         <div id="main-content">
+            <div id="api-key-bar">
+                <label for="api-key-input">OpenAI API Key</label>
+                <input type="password" id="api-key-input" placeholder="sk-..." class="api-key-field">
+            </div>
             <div id="canvas-container"></div>
 
             <div id="impression-overlay"></div>
@@ -143,10 +147,6 @@
                 </div>
                 <input type="file" id="import-file" accept=".json" style="display:none"
                        onchange="importImpressionData(this)">
-                <div class="param" style="margin-top:12px">
-                    <label>OpenAI API Key</label>
-                    <input type="password" id="api-key-input" placeholder="sk-..." class="api-key-field">
-                </div>
                 <div class="impression-actions" style="margin-top:6px">
                     <button onclick="rebuildEmbeddings()">既存データにembed付与</button>
                 </div>
@@ -852,7 +852,10 @@
 
     // 初期化
     ImpressionModel.cleanupOldKeys();
-    ImpressionModel.ensureDefaultSamples().then(() => {
+    Promise.all([
+        ImpressionModel.ensureDefaultSamples(),
+        ImpressionModel.ensureDefaultRules(),
+    ]).then(() => {
         updateSampleCount();
         updateDistillStatus();
     });

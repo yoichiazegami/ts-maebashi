@@ -49,6 +49,39 @@ body {
     cursor: text;
 }
 
+/* --- APIキーバー --- */
+#api-key-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+}
+
+#api-key-bar label {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#api-key-bar .api-key-field {
+    flex: 1;
+    max-width: 320px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+}
+
+#api-key-bar .api-key-field:focus {
+    border-color: #999;
+}
+
 /* --- 入力エリア --- */
 #input-area {
     padding: 6px 12px;
