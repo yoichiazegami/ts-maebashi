@@ -162,6 +162,153 @@ const ImpressionModel = (() => {
         return currentCount >= stored.sampleCount + 20;
     }
 
+    // -------------------------------------------------------
+    //  k-NN構造解析（蒸留用）
+    // -------------------------------------------------------
+    function analyzeEmbeddingStructure(samples) {
+        const withEmbed = samples.filter(s => s.embedding && s.embedding.length > 0);
+        if (withEmbed.length < 5) return null;
+
+        // --- 類似度行列を計算 ---
+        const n = withEmbed.length;
+        const simMatrix = [];
+        for (let i = 0; i < n; i++) {
+            simMatrix[i] = [];
+            for (let j = 0; j < n; j++) {
+                simMatrix[i][j] = i === j ? 1.0 : cosineSim(withEmbed[i].embedding, withEmbed[j].embedding);
+            }
+        }
+
+        // --- 簡易クラスタリング（連結成分ベース、閾値 0.65） ---
+        const CLUSTER_THRESH = 0.65;
+        const visited = new Array(n).fill(false);
+        const clusters = [];
+        for (let i = 0; i < n; i++) {
+            if (visited[i]) continue;
+            const cluster = [i];
+            visited[i] = true;
+            const queue = [i];
+            while (queue.length > 0) {
+                const cur = queue.shift();
+                for (let j = 0; j < n; j++) {
+                    if (!visited[j] && simMatrix[cur][j] >= CLUSTER_THRESH) {
+                        visited[j] = true;
+                        cluster.push(j);
+                        queue.push(j);
+                    }
+                }
+            }
+            if (cluster.length >= 2) clusters.push(cluster);
+        }
+
+        // クラスタごとの統計
+        const numKeys = ['strokeW', 'contrast', 'anchorPoints', 'cornerRadius', 'twist', 'roughen'];
+        const clusterSummaries = clusters.slice(0, 8).map((indices, ci) => {
+            const texts = indices.slice(0, 5).map(i => `「${withEmbed[i].text}」`).join(', ');
+            const more = indices.length > 5 ? ` 他${indices.length - 5}件` : '';
+            const avgs = {};
+            for (const k of numKeys) {
+                const vals = indices.map(i => withEmbed[i].params?.[k]).filter(v => typeof v === 'number');
+                avgs[k] = vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) : '?';
+            }
+            const capCounts = { round: 0, butt: 0, square: 0 };
+            indices.forEach(i => { const c = withEmbed[i].params?.lineCap; if (c) capCounts[c]++; });
+            const topCap = Object.entries(capCounts).sort((a, b) => b[1] - a[1])[0][0];
+            return `クラスタ${ci + 1}(${indices.length}件): ${texts}${more}\n` +
+                `  → sW=${avgs.strokeW}, con=${avgs.contrast}, cr=${avgs.cornerRadius}, ` +
+                `tw=${avgs.twist}, rg=${avgs.roughen}, cap=${topCap}`;
+        });
+
+        // --- 意味的に近いのにパラメータが大きく異なるペア ---
+        const divergentPairs = [];
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                if (simMatrix[i][j] < 0.7) continue;
+                const pi = encodeParams(withEmbed[i].params || {});
+                const pj = encodeParams(withEmbed[j].params || {});
+                let diff = 0;
+                diff += Math.abs(pi.strokeW - pj.strokeW) / 10 * 3;
+                diff += Math.abs(pi.contrast - pj.contrast) / 1000;
+                diff += Math.abs(pi.twist - pj.twist) / 80;
+                diff += Math.abs(pi.roughen - pj.roughen) / 50;
+                diff += Math.abs(pi.cornerRadius - pj.cornerRadius) / 40;
+                if (diff > 0.5) {
+                    divergentPairs.push({
+                        i, j, sim: simMatrix[i][j], diff,
+                        textA: withEmbed[i].text, textB: withEmbed[j].text,
+                        pA: withEmbed[i].params, pB: withEmbed[j].params
+                    });
+                }
+            }
+        }
+        divergentPairs.sort((a, b) => b.diff - a.diff);
+        const topDivergent = divergentPairs.slice(0, 6).map(d => {
+            const pA = d.pA || {}, pB = d.pB || {};
+            const diffs = [];
+            if (Math.abs((pA.strokeW || 0) - (pB.strokeW || 0)) > 1) diffs.push(`sW:${pA.strokeW}→${pB.strokeW}`);
+            if (Math.abs((pA.contrast || 0) - (pB.contrast || 0)) > 50) diffs.push(`con:${pA.contrast}→${pB.contrast}`);
+            if (Math.abs((pA.twist || 0) - (pB.twist || 0)) > 5) diffs.push(`tw:${pA.twist}→${pB.twist}`);
+            if (Math.abs((pA.roughen || 0) - (pB.roughen || 0)) > 5) diffs.push(`rg:${pA.roughen}→${pB.roughen}`);
+            if (Math.abs((pA.cornerRadius || 0) - (pB.cornerRadius || 0)) > 5) diffs.push(`cr:${pA.cornerRadius}→${pB.cornerRadius}`);
+            if (pA.lineCap !== pB.lineCap) diffs.push(`cap:${pA.lineCap}→${pB.lineCap}`);
+            return `「${d.textA}」⇔「${d.textB}」(sim=${d.sim.toFixed(2)}) 差: ${diffs.join(', ')}`;
+        });
+
+        // --- k-NN予測の外れ値（LOO交差検証的） ---
+        const outliers = [];
+        for (let i = 0; i < n; i++) {
+            const neighbors = [];
+            for (let j = 0; j < n; j++) {
+                if (i === j) continue;
+                neighbors.push({ idx: j, sim: simMatrix[i][j] });
+            }
+            neighbors.sort((a, b) => b.sim - a.sim);
+            const topN = neighbors.slice(0, 5).filter(nb => nb.sim >= 0.3);
+            if (topN.length === 0) continue;
+
+            const predicted = {};
+            let wSum = 0;
+            for (const k of numKeys) predicted[k] = 0;
+            for (const nb of topN) {
+                const w = nb.sim * nb.sim;
+                const enc = encodeParams(withEmbed[nb.idx].params || {});
+                for (const k of numKeys) predicted[k] += enc[k] * w;
+                wSum += w;
+            }
+            if (wSum <= 0) continue;
+            for (const k of numKeys) predicted[k] /= wSum;
+
+            const actual = encodeParams(withEmbed[i].params || {});
+            let totalErr = 0;
+            const errs = {};
+            for (const k of numKeys) {
+                const range = k === 'contrast' ? 1000 : k === 'strokeW' ? 10 :
+                    k === 'twist' ? 80 : k === 'roughen' ? 50 :
+                    k === 'cornerRadius' ? 40 : k === 'anchorPoints' ? 36 : 1;
+                const e = Math.abs(actual[k] - predicted[k]) / range;
+                errs[k] = { actual: actual[k], predicted: predicted[k].toFixed(1), err: e };
+                totalErr += e;
+            }
+            outliers.push({ idx: i, text: withEmbed[i].text, totalErr, errs, topSim: topN[0].sim });
+        }
+        outliers.sort((a, b) => b.totalErr - a.totalErr);
+        const topOutliers = outliers.slice(0, 6).map(o => {
+            const bigErrs = Object.entries(o.errs)
+                .filter(([, v]) => v.err > 0.15)
+                .map(([k, v]) => `${k}: 予測${v.predicted}→実際${v.actual}`)
+                .join(', ');
+            return `「${o.text}」(最近傍sim=${o.topSim.toFixed(2)}) ${bigErrs}`;
+        });
+
+        return {
+            embeddedCount: n,
+            clusterCount: clusters.length,
+            clusterSummaries,
+            divergentPairs: topDivergent,
+            outliers: topOutliers,
+        };
+    }
+
     async function distillRules(onStatus) {
         const key = getApiKey();
         if (!key) return { error: 'APIキー未設定' };
@@ -169,7 +316,12 @@ const ImpressionModel = (() => {
         const samples = loadSamples();
         if (samples.length < 10) return { error: 'データが10件未満（蒸留には10件以上必要）' };
 
-        if (onStatus) onStatus('⏳ 蒸留中… 全データを分析しています');
+        if (onStatus) onStatus('⏳ 蒸留中… embedding構造を分析しています');
+
+        // k-NN構造解析
+        const structure = analyzeEmbeddingStructure(samples);
+
+        if (onStatus) onStatus('⏳ 蒸留中… LLMで統合分析しています');
 
         const sampleLines = samples.map((s, i) => {
             const p = s.params || {};
@@ -178,8 +330,35 @@ const ImpressionModel = (() => {
                 `tw=${p.twist}, rg=${p.roughen}, lH=${p.lineHeight}, lS=${p.letterSpacing}`;
         }).join('\n');
 
+        // k-NN構造情報をプロンプトに組み込む
+        let structureSection = '';
+        if (structure) {
+            structureSection = `\n## k-NN embedding構造解析（コサイン類似度ベース）\n`;
+            structureSection += `embedding付きサンプル: ${structure.embeddedCount}件, 検出クラスタ数: ${structure.clusterCount}\n`;
+
+            if (structure.clusterSummaries.length > 0) {
+                structureSection += `\n### 意味クラスタ（類似度≥0.65の連結成分）\n`;
+                structureSection += structure.clusterSummaries.join('\n') + '\n';
+                structureSection += '→ 各クラスタ内のパラメーター傾向に注目し、テーマ→パラメーターの法則を抽出せよ\n';
+            }
+
+            if (structure.divergentPairs.length > 0) {
+                structureSection += `\n### 意味的に近いがパラメーターが異なるペア（ニュアンス境界）\n`;
+                structureSection += structure.divergentPairs.join('\n') + '\n';
+                structureSection += '→ これらは表面的には類似するが、ユーザーが質的に異なると判断した境界ケース。\n';
+                structureSection += '   何がパラメーター分岐の決定因子かを特定せよ\n';
+            }
+
+            if (structure.outliers.length > 0) {
+                structureSection += `\n### k-NN予測の外れ値（Leave-One-Out検証）\n`;
+                structureSection += structure.outliers.join('\n') + '\n';
+                structureSection += '→ k-NNが予測を大きく外すケース。LLMが補正すべきポイントを法則化せよ\n';
+            }
+        }
+
         const distillPrompt = `あなたはタイポグラフィ設計の分析専門家です。
-以下はユーザーが様々なテキストに対して設定したストローク書体パラメーターの全記録です。
+以下はユーザーが様々なテキストに対して設定したストローク書体パラメーターの全記録と、
+テキストembedding間の類似度に基づく構造分析結果です。
 
 ## パラメーター説明
 - sW (strokeW, 0.1〜10): 線の太さ
@@ -195,50 +374,48 @@ const ImpressionModel = (() => {
 
 ## 全${samples.length}件のデータ
 ${sampleLines}
-
+${structureSection}
 ## 分析指示
-上記データから、テキストの特徴とパラメーター設定の関係性を**網羅的かつ多角的に**分析してください。
-大きな傾向から細かなニュアンスまで、できる限り多くのパターンを発見し、**圧縮された形式**で言語化してください。
+上記の**個別データとk-NN構造解析の両方**を統合し、テキストの特徴とパラメーター設定の関係性を
+**網羅的かつ多角的に**分析してください。
+特にk-NN構造解析が示す「クラスタ傾向」「ニュアンス境界」「予測外れ値」を重視し、
+k-NNでは捉えきれないルールを明文化してください。
 
 ### 必須分析項目
 1. **マクロ傾向（全体像）**
    - ユーザーの全体的な好み・デフォルト的な値域
    - 極端な値を使う条件と使わない条件
-   - 各パラメーターの使用頻度分布の偏り
 
-2. **テーマ・モチーフ → パラメーター対応**
-   - 自然/都市/抽象/人間/食/戦闘/芸術 等の題材と各パラメーターの対応
-   - 季節・天候・時間帯の表現パターン
-   - 具体的なテキスト例を引用して根拠を示す
+2. **クラスタ内法則**
+   - 各意味クラスタが示すテーマ→パラメーター対応ルール
+   - クラスタ間の差異が大きいパラメーターとその意味
 
-3. **感情・トーン → パラメーター対応**
+3. **ニュアンス境界ルール**（divergentペアから抽出）
+   - 意味的に近いテキストのパラメーター分岐の決定因子
+   - k-NNが混同しやすいが質的に異なるケースの判別基準
+
+4. **k-NN外れ値補正ルール**
+   - k-NNが予測を外す条件のパターン化
+   - 外れ値に共通する特徴（皮肉、反語、文体と内容の乖離など）
+
+5. **感情・トーン → パラメーター対応**
    - 強さ/繊細さ/怒り/悲しみ/喜び/静寂/緊張/弛緩 等
-   - ポジティブ⇔ネガティブの表現差
 
-4. **文体・レジスター → パラメーター対応**
-   - 敬語/口語/文語/詩的/広告的/学術的 等
-   - 漢字密度・ひらがな比率・カタカナ・英字の影響
-   - 短文 vs 長文の差
+6. **文体・レジスター → パラメーター対応**
+   - 敬語/口語/文語/詩的/広告的 等の差
+   - 漢字密度・文字種の影響
 
-5. **パラメーター間の相互作用・共起パターン**
-   - よく一緒に動くパラメーターの組（例: sW↑ + con↑）
-   - 排他的な組み合わせ（例: cr↑ なら tw=0）
-   - 連鎖的な変化パターン
+7. **パラメーター間の相互作用・共起パターン**
+   - よく一緒に動くパラメーターの組
+   - 排他的な組み合わせ
 
-6. **微細なニュアンス・例外パターン**
-   - 一般傾向から外れるケースとその理由
-   - 同じテーマでも文体が変わると変化するパラメーター
-   - lineCap, linearize, anchorPoints の選択基準
-
-7. **ユーザー固有の癖・特徴**
-   - 他の一般的タイポグラフィ設計と比較した際の独自性
-   - 使わない値域、偏り、こだわりが見えるポイント
+8. **ユーザー固有の癖・特徴**
 
 ### 出力ルール
 - 箇条書きで簡潔に圧縮（冗長な説明不要）
-- 推測や一般論ではなく**データに基づく事実のみ**
+- 推測や一般論ではなく**データとk-NN分析結果に基づく事実のみ**
 - 可能な限り具体的な数値範囲で記述（例: 「sW 4〜7」）
-- 1500字以内に凝縮すること`;
+- 2000字以内に凝縮すること`;
 
         try {
             const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -250,7 +427,7 @@ ${sampleLines}
                 body: JSON.stringify({
                     model: 'gpt-4o-mini',
                     temperature: 0.15,
-                    max_tokens: 2000,
+                    max_tokens: 2500,
                     messages: [{ role: 'user', content: distillPrompt }],
                 }),
             });
@@ -267,7 +444,7 @@ ${sampleLines}
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',
                         temperature: 0.15,
-                        max_tokens: 2000,
+                        max_tokens: 2500,
                         messages: [{ role: 'user', content: distillPrompt }],
                     }),
                 });
@@ -314,8 +491,11 @@ ${sampleLines}
 入力テキストを多角的に分析し、表示に最適なストローク書体パラメーターを推論してください。
 
 ## 分析すべき要素（すべて総合的に判断）
-1. **モチーフ・題材**: 何について書かれているか（自然、戦い、恋愛、食べ物、建築、音楽など）
-   - 岩や鉄 → 太く硬く / 花や水 → 細く柔らかく / 炎や風 → 動的に
+1. **モチーフ・題材の物性・質感**: カテゴリの一般印象ではなく、対象物固有の物理的質感を連想せよ
+   - 同じ「自然」でも: 枝→細い・硬い・乾燥 / 若葉→柔らかい・薄い / 幹→太い・粗い / 岩→極太・角張る
+   - 同じ「水」でも: 滝→力強い・太い / 霧→繊細・消えそう / 氷→硬い・鋭い / 波→うねり・動的
+   - 同じ「木」でも: 割り箸→細く硬く直線的 / 大木→太く粗い / 桜→繊細で丸い
+   - 「自然=柔らかい」「戦い=荒い」のような短絡的一般化は禁止。具体物の質感に忠実に
 2. **感情・雰囲気**: 喜怒哀楽、緊張・弛緩、高揚・沈静
    - 怒り → 太くラフ / 悲しみ → 細く静か / 喜び → 丸く軽やか
 3. **文体・語調**: 敬語、口語、文語、詩的、学術的、広告的
@@ -639,6 +819,42 @@ ${sampleLines}
         context += `\n## k-NN推定結果（ベース値。最高類似度=${topSim.toFixed(3)}）\n`;
         context += JSON.stringify(knnParams) + '\n';
 
+        // ⑥-b パラメータ一貫性スコア（topK内の分散を分析）
+        const consistencyKeys = ['strokeW', 'contrast', 'cornerRadius', 'twist', 'roughen'];
+        const consistencyInfo = {};
+        let overallConsistency = 0;
+        for (const ck of consistencyKeys) {
+            const vals = topK.map(({ sample }) => {
+                const v = sample.params?.[ck];
+                return typeof v === 'number' ? v : 0;
+            });
+            const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+            const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length;
+            const std = Math.sqrt(variance);
+            const range = ck === 'contrast' ? 1000 : ck === 'strokeW' ? 10 :
+                ck === 'twist' ? 80 : ck === 'roughen' ? 50 : ck === 'cornerRadius' ? 40 : 1;
+            const normalizedStd = std / range;
+            consistencyInfo[ck] = { mean: mean.toFixed(1), std: std.toFixed(2), consistent: normalizedStd < 0.08 };
+            overallConsistency += normalizedStd < 0.08 ? 1 : 0;
+        }
+        const highConsistencyParams = Object.entries(consistencyInfo)
+            .filter(([, v]) => v.consistent)
+            .map(([k, v]) => `${k}=${v.mean}(σ=${v.std})`);
+        const lowConsistencyParams = Object.entries(consistencyInfo)
+            .filter(([, v]) => !v.consistent)
+            .map(([k, v]) => `${k}(σ=${v.std})`);
+
+        context += '\n## k-NN一貫性分析（類似サンプル間のパラメータ分散）\n';
+        if (highConsistencyParams.length > 0) {
+            context += `**高一貫性（ユーザーの明確な意図あり、変更禁止）**: ${highConsistencyParams.join(', ')}\n`;
+        }
+        if (lowConsistencyParams.length > 0) {
+            context += `**低一貫性（LLM判断の余地あり）**: ${lowConsistencyParams.join(', ')}\n`;
+        }
+        const consensusLevel = overallConsistency >= 4 ? '極めて強い' :
+            overallConsistency >= 3 ? '強い' : overallConsistency >= 2 ? '中程度' : '弱い';
+        context += `全体の合意度: ${consensusLevel}（${overallConsistency}/${consistencyKeys.length}パラメータが一致）\n`;
+
         context += '\n## あなたの役割：k-NNが拾えないニュアンスの補完\n';
         context += 'k-NNはテキストの意味的類似度に基づく数値補間であり、以下が苦手である:\n';
         context += '- **皮肉・反語**: 表面的に穏やかでも内容が攻撃的な場合の質感の使い分け\n';
@@ -648,6 +864,10 @@ ${sampleLines}
         context += '- **コンテキスト固有の質感**: 同じ「花」でも弔花と祝花では異なるニュアンス\n';
         context += '- **パラメーター間の意味的整合性**: 個々の値は近くても組み合わせとして不自然な場合の修正\n';
         context += '\n### 調整ルール\n';
+        context += '- **まず上記の類似サンプルを観察し、ユーザーがそのモチーフにどのような物性・質感を見出しているかを推測せよ**\n';
+        context += '- 類似サンプルが一貫して示すパラメーター傾向（例: 木関連が軒並み細い線）は、ユーザーの意図的な判断である。LLMの一般的カテゴリ印象（例:「自然=柔らかい」）よりも、k-NNが示すユーザーの実データを優先すること\n';
+        context += '- **高一貫性パラメーターは絶対に変更するな**。類似サンプルの値が揃っているということは、ユーザーが明確な意図を持ってその値を選んでいる証拠である\n';
+        context += '- 低一貫性パラメーターのみ、テキスト固有のニュアンスに基づいて調整してよい\n';
         context += '- k-NN推定値をベースとし、上記のニュアンス面のみ調整する\n';
         context += '- 数値の大幅な変更は避ける（strokeWで±1.5以内、contrastで±80以内が目安）\n';
         context += '- **慎重パラメーター**: cornerRadius, twist, roughen はk-NNの値を特に尊重すること。これらは視覚的変化が大きく、k-NN値が0ならば0のまま維持するのが原則。ON/OFFの判断はk-NNに委ね、LLMは既にONの場合の微調整のみ行う\n';
@@ -658,7 +878,7 @@ ${sampleLines}
         } else if (topSim >= 0.4) {
             context += '中程度の類似度。k-NN値を尊重しつつ、テキスト固有のニュアンスを反映すること\n';
         } else {
-            context += '低類似度のためk-NN値の信頼性がやや低い。蒸留ルールとテキスト分析を加味してより積極的に補正してよい\n';
+            context += '低類似度のためk-NN値の信頼性がやや低い。ただし高一貫性パラメーターは依然として尊重すること\n';
         }
 
         if (_onStatus) _onStatus('⏳ LLM微調整中…');
