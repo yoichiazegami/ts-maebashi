@@ -977,10 +977,14 @@ k-NNでは捉えきれないルールを明文化してください。
     }
 
     let _defaultSamplesLoaded = false;
+    let _inMemoryDefaults = null;
 
     function loadSamples() {
-        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-        catch { return []; }
+        try {
+            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            if (stored.length > 0) return stored;
+        } catch { /* fall through */ }
+        return _inMemoryDefaults || [];
     }
 
     async function ensureDefaultSamples() {
@@ -993,8 +997,12 @@ k-NNでは捉えきれないルールを明文化してください。
             if (!res.ok) return;
             const data = await res.json();
             if (Array.isArray(data) && data.length > 0) {
-                saveSamples(data);
-                console.log(`デフォルトデータ ${data.length}件をロードしました`);
+                if (!saveSamples(data)) {
+                    _inMemoryDefaults = data;
+                    console.log(`デフォルトデータ ${data.length}件をメモリにロード（localStorage容量不足）`);
+                } else {
+                    console.log(`デフォルトデータ ${data.length}件をロードしました`);
+                }
             }
         } catch (e) {
             console.warn('デフォルトデータの読み込みに失敗:', e);
