@@ -300,7 +300,7 @@ const ImpressionModel = (() => {
             for (const k of numKeys) {
                 const range = k === 'contrast' ? 1000 : k === 'strokeW' ? 10 :
                     k === 'twist' ? 80 : k === 'roughen' ? 50 :
-                    k === 'cornerRadius' ? 40 : k === 'anchorPoints' ? 36 : 1;
+                        k === 'cornerRadius' ? 40 : k === 'anchorPoints' ? 36 : 1;
                 const e = Math.abs(actual[k] - predicted[k]) / range;
                 errs[k] = { actual: actual[k], predicted: predicted[k].toFixed(1), err: e };
                 totalErr += e;
@@ -976,38 +976,32 @@ k-NNでは捉えきれないルールを明文化してください。
         }
     }
 
-    let _defaultSamplesLoaded = false;
-    let _inMemoryDefaults = null;
+    let _defaultSamples = [];
+
+    function loadUserSamples() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch { return []; }
+    }
 
     function loadSamples() {
-        try {
-            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-            if (stored.length > 0) return stored;
-        } catch { /* fall through */ }
-        return _inMemoryDefaults || [];
+        return _defaultSamples.concat(loadUserSamples());
     }
 
     async function ensureDefaultSamples() {
-        if (_defaultSamplesLoaded) return;
-        _defaultSamplesLoaded = true;
-        const existing = loadSamples();
-        if (existing.length > 0) return;
+        if (_defaultSamples.length > 0) return;
         try {
             const res = await fetch('data/default_samples.json');
             if (!res.ok) return;
             const data = await res.json();
             if (Array.isArray(data) && data.length > 0) {
-                if (!saveSamples(data)) {
-                    _inMemoryDefaults = data;
-                    console.log(`デフォルトデータ ${data.length}件をメモリにロード（localStorage容量不足）`);
-                } else {
-                    console.log(`デフォルトデータ ${data.length}件をロードしました`);
-                }
+                _defaultSamples = data;
+                console.log(`デフォルトデータ ${data.length}件をロード`);
             }
         } catch (e) {
             console.warn('デフォルトデータの読み込みに失敗:', e);
         }
     }
+
     function saveSamples(samples) {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
@@ -1019,32 +1013,29 @@ k-NNでは捉えきれないルールを明文化してください。
     }
 
     function addSample(text, params, embedding) {
-        const samples = loadSamples();
-        samples.push({
+        const userSamples = loadUserSamples();
+        userSamples.push({
             text: text || '',
             params: clampParams({ ...params }),
             embedding: embedding || null,
             timestamp: Date.now(),
         });
-        if (!saveSamples(samples)) {
-            // 容量不足: embeddingキャッシュを削除して再試行
+        if (!saveSamples(userSamples)) {
             console.warn('Storage full, clearing caches and retrying...');
             localStorage.removeItem(EMBED_CACHE_KEY);
             localStorage.removeItem(LLM_CACHE_KEY);
             localStorage.removeItem(HYBRID_CACHE_KEY);
-            if (!saveSamples(samples)) {
-                // それでもダメならembeddingなしで保存
-                samples[samples.length - 1].embedding = null;
-                if (!saveSamples(samples)) {
+            if (!saveSamples(userSamples)) {
+                userSamples[userSamples.length - 1].embedding = null;
+                if (!saveSamples(userSamples)) {
                     alert('ストレージ容量が不足しています。「書出」でデータをバックアップ後、「消去」で容量を確保してください。');
                     return -1;
                 }
             }
         }
-        // 統計が変わるのでキャッシュを無効化
         localStorage.removeItem(LLM_CACHE_KEY);
         localStorage.removeItem(HYBRID_CACHE_KEY);
-        return samples.length;
+        return loadSamples().length;
     }
 
     function exportSamples() {
@@ -1055,7 +1046,7 @@ k-NNでは捉えきれないルールを明文化してください。
         try {
             const data = JSON.parse(json);
             if (!Array.isArray(data)) return false;
-            saveSamples(loadSamples().concat(data));
+            saveSamples(loadUserSamples().concat(data));
             return true;
         } catch { return false; }
     }
